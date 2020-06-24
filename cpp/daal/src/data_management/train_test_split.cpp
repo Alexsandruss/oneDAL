@@ -27,6 +27,7 @@
 #include "src/data_management/service_numeric_table.h"
 #include "data_management/features/defines.h"
 #include "src/algorithms/service_error_handling.h"
+#include "src/externals/service_rng.h"
 
 namespace daal
 {
@@ -38,6 +39,59 @@ typedef daal::data_management::NumericTable::StorageLayout NTLayout;
 
 const size_t BLOCK_CONST      = 2048;
 const size_t THREADING_BORDER = 8388608;
+
+template <typename IdxType, daal::CpuType cpu>
+services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, const unsigned int seed)
+{
+    const size_t n = idxTable->getNumberOfRows();
+    daal::internal::WriteColumns<IdxType, cpu> idxBlock(*idxTable, 0, 0, n);
+    IdxType * idx = idxBlock.get();
+    DAAL_CHECK_MALLOC(idx);
+
+    daal::services::internal::TArray<IdxType, cpu> swapIdxArr(n);
+    IdxType * swapIdx = swapIdxArr.get();
+    DAAL_CHECK_MALLOC(swapIdx);
+
+    const size_t blockSize = 16 * BLOCK_CONST;
+    const size_t nBlocks   = n / blockSize + !!(n % blockSize);
+
+    daal::conditional_threader_for(n > THREADING_BORDER, nBlocks, [&](size_t iBlock) {
+        const size_t start = iBlock * blockSize;
+        const size_t end   = daal::services::internal::min<cpu, size_t>(start + blockSize, n);
+        daal::internal::BaseRNGs<cpu> baseRng(seed + iBlock);
+        daal::internal::RNGs<IdxType, cpu> rng;
+
+        PRAGMA_IVDEP
+        PRAGMA_VECTOR_ALWAYS
+        for (size_t i = start; i < end; ++i) idx[i] = i;
+
+        rng.uniform(end - start, swapIdx + start, baseRng.getState(), 0, n);
+    });
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        daal::services::internal::swap<cpu, IdxType>(idx[i], idx[swapIdx[i]]);
+    }
+
+    return services::Status();
+}
+
+template <typename IdxType>
+void generateShuffledIndicesDispImpl(const NumericTablePtr & idxTable, const unsigned int seed)
+{
+#define DAAL_GENERATE_INDICES(cpuId, ...) generateShuffledIndicesImpl<IdxType, cpuId>(__VA_ARGS__);
+    DAAL_DISPATCH_FUNCTION_BY_CPU(DAAL_GENERATE_INDICES, idxTable, seed);
+#undef DAAL_GENERATE_INDICES
+}
+
+template <typename IdxType>
+DAAL_EXPORT void generateShuffledIndices(const NumericTablePtr & idxTable, const unsigned int seed)
+{
+    DAAL_SAFE_CPU_CALL((generateShuffledIndicesDispImpl<IdxType>(idxTable, seed)),
+                       (generateShuffledIndicesImpl<IdxType, daal::CpuType::sse2>(idxTable, seed)));
+}
+
+template DAAL_EXPORT void generateShuffledIndices<int>(const NumericTablePtr & idxTable, const unsigned int seed);
 
 template <typename DataType, typename IdxType, daal::CpuType cpu>
 services::Status assignColumnValues(const DataType * origDataPtr, const NumericTablePtr & dataTable, const IdxType * idxPtr, const size_t startRow,
