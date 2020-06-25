@@ -28,6 +28,7 @@
 #include "data_management/features/defines.h"
 #include "src/algorithms/service_error_handling.h"
 #include "src/externals/service_rng.h"
+#include "src/externals/service_rng_mkl.h"
 
 namespace daal
 {
@@ -43,7 +44,8 @@ const size_t THREADING_BORDER = 8388608;
 template <typename IdxType, daal::CpuType cpu>
 services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, const unsigned int seed)
 {
-    const size_t n = idxTable->getNumberOfRows();
+    const size_t nThreads = threader_get_threads_number();
+    const size_t n        = idxTable->getNumberOfRows();
     daal::internal::WriteColumns<IdxType, cpu> idxBlock(*idxTable, 0, 0, n);
     IdxType * idx = idxBlock.get();
     DAAL_CHECK_MALLOC(idx);
@@ -55,18 +57,32 @@ services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, c
     const size_t blockSize = 16 * BLOCK_CONST;
     const size_t nBlocks   = n / blockSize + !!(n % blockSize);
 
-    daal::conditional_threader_for(n > THREADING_BORDER, nBlocks, [&](size_t iBlock) {
-        const size_t start = iBlock * blockSize;
-        const size_t end   = daal::services::internal::min<cpu, size_t>(start + blockSize, n);
-        daal::internal::BaseRNGs<cpu> baseRng(seed + iBlock);
+    if (n > THREADING_BORDER / 8 && nThreads > 1)
+    {
+        daal::threader_for(nBlocks, nBlocks, [&](size_t iBlock) {
+            const size_t start = iBlock * blockSize;
+            const size_t end   = daal::services::internal::min<cpu, size_t>(start + blockSize, n);
+            daal::internal::BaseRNGs<cpu> baseRng(seed, VSL_BRNG_MT2203);
+            baseRng.skipAhead(start);
+            daal::internal::RNGs<IdxType, cpu> rng;
+
+            rng.uniform(end - start, swapIdx + start, baseRng.getState(), 0, n);
+
+            PRAGMA_IVDEP
+            PRAGMA_VECTOR_ALWAYS
+            for (size_t i = start; i < end; ++i) idx[i] = i;
+        });
+    }
+    else
+    {
+        daal::internal::BaseRNGs<cpu> baseRng(seed, VSL_BRNG_MT2203);
         daal::internal::RNGs<IdxType, cpu> rng;
+        rng.uniform(n, swapIdx, baseRng.getState(), 0, n);
 
         PRAGMA_IVDEP
         PRAGMA_VECTOR_ALWAYS
-        for (size_t i = start; i < end; ++i) idx[i] = i;
-
-        rng.uniform(end - start, swapIdx + start, baseRng.getState(), 0, n);
-    });
+        for (size_t i = 0; i < n; ++i) idx[i] = i;
+    }
 
     for (size_t i = 0; i < n; ++i)
     {
