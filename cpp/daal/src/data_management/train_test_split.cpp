@@ -41,52 +41,73 @@ typedef daal::data_management::NumericTable::StorageLayout NTLayout;
 const size_t BLOCK_CONST      = 2048;
 const size_t THREADING_BORDER = 8388608;
 
+template <typename IdxType>
+size_t genSwapIdx(size_t i, IdxType * randomNumbers, size_t & rnIdx)
+{
+    size_t mask, j;
+
+    mask = i;
+    mask |= mask >> 1;
+    mask |= mask >> 2;
+    mask |= mask >> 4;
+    mask |= mask >> 8;
+    mask |= mask >> 16;
+
+    j = randomNumbers[rnIdx] & mask;
+    while (j > i)
+    {
+        ++rnIdx;
+        j = randomNumbers[rnIdx] & mask;
+    }
+    ++rnIdx;
+
+    return j;
+}
+
 template <typename IdxType, daal::CpuType cpu>
 services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, const unsigned int seed)
 {
     const size_t nThreads = threader_get_threads_number();
     const size_t n        = idxTable->getNumberOfRows();
+    const size_t nSwapIdx = n * 3 / 2;
     daal::internal::WriteColumns<IdxType, cpu> idxBlock(*idxTable, 0, 0, n);
     IdxType * idx = idxBlock.get();
     DAAL_CHECK_MALLOC(idx);
 
-    daal::services::internal::TArray<IdxType, cpu> swapIdxArr(n);
+    daal::services::internal::TArray<IdxType, cpu> swapIdxArr(nSwapIdx);
     IdxType * swapIdx = swapIdxArr.get();
     DAAL_CHECK_MALLOC(swapIdx);
+
+    const size_t swapBlockSize = 16 * BLOCK_CONST;
+    const size_t nSwapBlocks   = nSwapIdx / swapBlockSize + !!(nSwapIdx % swapBlockSize);
+
+    daal::threader_for(nSwapBlocks, nSwapBlocks, [&](size_t iBlock) {
+        const size_t start = iBlock * swapBlockSize;
+        const size_t end   = daal::services::internal::min<cpu, size_t>(start + swapBlockSize, nSwapIdx);
+        daal::internal::BaseRNGs<cpu> baseRng(seed, VSL_BRNG_MT19937);
+        baseRng.skipAhead(start);
+        daal::internal::RNGs<IdxType, cpu> rng;
+
+        rng.uniform(end - start, swapIdx + start, baseRng.getState(), 0, daal::services::internal::MaxVal<int>::get());
+    });
 
     const size_t blockSize = 16 * BLOCK_CONST;
     const size_t nBlocks   = n / blockSize + !!(n % blockSize);
 
-    if (n > THREADING_BORDER / 8 && nThreads > 1)
-    {
-        daal::threader_for(nBlocks, nBlocks, [&](size_t iBlock) {
-            const size_t start = iBlock * blockSize;
-            const size_t end   = daal::services::internal::min<cpu, size_t>(start + blockSize, n);
-            daal::internal::BaseRNGs<cpu> baseRng(seed, VSL_BRNG_MT2203);
-            baseRng.skipAhead(start);
-            daal::internal::RNGs<IdxType, cpu> rng;
-
-            rng.uniform(end - start, swapIdx + start, baseRng.getState(), 0, n);
-
-            PRAGMA_IVDEP
-            PRAGMA_VECTOR_ALWAYS
-            for (size_t i = start; i < end; ++i) idx[i] = i;
-        });
-    }
-    else
-    {
-        daal::internal::BaseRNGs<cpu> baseRng(seed, VSL_BRNG_MT2203);
-        daal::internal::RNGs<IdxType, cpu> rng;
-        rng.uniform(n, swapIdx, baseRng.getState(), 0, n);
+    daal::threader_for(nBlocks, nBlocks, [&](size_t iBlock) {
+        const size_t start = iBlock * blockSize;
+        const size_t end   = daal::services::internal::min<cpu, size_t>(start + blockSize, n);
 
         PRAGMA_IVDEP
         PRAGMA_VECTOR_ALWAYS
-        for (size_t i = 0; i < n; ++i) idx[i] = i;
-    }
+        for (size_t i = start; i < end; ++i) idx[i] = i;
+    });
 
-    for (size_t i = 0; i < n; ++i)
+    size_t iIdx = 0;
+    for (size_t i = n - 1; i > 1; --i)
     {
-        daal::services::internal::swap<cpu, IdxType>(idx[i], idx[swapIdx[i]]);
+        size_t j = genSwapIdx<IdxType>(i, swapIdx, iIdx);
+        daal::services::internal::swap<cpu, IdxType>(idx[i], idx[j]);
     }
 
     return services::Status();
