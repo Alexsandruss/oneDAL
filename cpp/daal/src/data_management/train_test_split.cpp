@@ -73,7 +73,7 @@ services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, c
     size_t nTrainNeeded, nTestNeeded, nTrain, nTest;
     nTestNeeded = n * p;
     nTrainNeeded = n - nTestNeeded;
-    printf("train size - %f, n - %lu, nTrainNeeded - %lu, nTestNeeded - %lu\n", p, n, nTrainNeeded, nTestNeeded);
+    // printf("train size - %f, n - %lu, nTrainNeeded - %lu, nTestNeeded - %lu\n", p, n, nTrainNeeded, nTestNeeded);
 
     daal::services::internal::TArray<int, cpu> nSubTestArr(nBlocks);
     daal::services::internal::TArray<int, cpu> nSubTrainArr(nBlocks);
@@ -131,7 +131,7 @@ services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, c
         nTest += nSubTest[iBlock];
     }
 
-    printf("unbalanced ns: %lu %lu\n", nTrain, nTest);
+    // printf("unbalanced ns: %lu %lu\n", nTrain, nTest);
 
     high_resolution_clock::time_point t3 = high_resolution_clock::now();
 
@@ -139,7 +139,7 @@ services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, c
     size_t skipTest = 0;
     while ( nTrain < nTrainNeeded )
     {
-        printf("balancing train: %lu of %lu\n", nTrain, nTrainNeeded);
+        // printf("balancing train: %lu of %lu\n", nTrain, nTrainNeeded);
         size_t nGen = (nTrainNeeded - nTrain) * 4;
         if (nGen <= 0)
             break;
@@ -172,7 +172,7 @@ services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, c
 
     while ( nTest < nTestNeeded )
     {
-        printf("balancing test: %lu of %lu\n", nTest, nTestNeeded);
+        // printf("balancing test: %lu of %lu\n", nTest, nTestNeeded);
         size_t nGen = (nTestNeeded - nTest) * 4;
         if (nGen <= 0)
             break;
@@ -201,7 +201,7 @@ services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, c
         skipTest += nGen;
     }
 
-    printf("balanced ns: %lu %lu\n", nTrain, nTest);
+    // printf("balanced ns: %lu %lu\n", nTrain, nTest);
 
     high_resolution_clock::time_point t5 = high_resolution_clock::now();
 
@@ -238,12 +238,12 @@ services::Status generateShuffledIndicesImpl(const NumericTablePtr & idxTable, c
     size_t dt4 = duration_cast<std::chrono::nanoseconds>(t5 - t4).count();
     size_t dt5 = duration_cast<std::chrono::nanoseconds>(t6 - t5).count();
 
-    printf("idx:init       - %lu\n", dt0);
-    printf("idx:bernDistr  - %lu\n", dt1);
-    printf("idx:nCounts    - %lu\n", dt2);
-    printf("idx:trainFix   - %lu\n", dt3);
-    printf("idx:testFix    - %lu\n", dt4);
-    printf("idx:assign     - %lu\n", dt5);
+    // printf("idx:init       - %lu\n", dt0);
+    // printf("idx:bernDistr  - %lu\n", dt1);
+    // printf("idx:nCounts    - %lu\n", dt2);
+    // printf("idx:trainFix   - %lu\n", dt3);
+    // printf("idx:testFix    - %lu\n", dt4);
+    // printf("idx:assign     - %lu\n", dt5);
 
     return services::Status();
 }
