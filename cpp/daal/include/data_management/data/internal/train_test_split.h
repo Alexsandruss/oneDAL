@@ -28,7 +28,7 @@ namespace data_management
 namespace internal
 {
 template <typename IdxType>
-DAAL_EXPORT void generateShuffledIndices(const NumericTablePtr & idxTable, const unsigned int seed);
+DAAL_EXPORT void generateShuffledIndices(const NumericTablePtr & idxTable, const NumericTablePtr & rngStateTable);
 
 template <typename IdxType>
 DAAL_EXPORT void trainTestSplit(const NumericTablePtr & inputTable, const NumericTablePtr & trainTable, const NumericTablePtr & testTable,
