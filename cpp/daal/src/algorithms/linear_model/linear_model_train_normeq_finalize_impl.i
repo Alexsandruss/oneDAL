@@ -156,6 +156,8 @@ Status FinalizeKernel<algorithmFPType, cpu>::solveSystem(DAAL_INT p, algorithmFP
     char up = 'U';
     DAAL_INT info;
 
+    printf("lin_solve_sys: p=%ld ny=%ld\n", p, ny);
+
     {
         DAAL_ITTNOTIFY_SCOPED_TASK(solveSystem.xpotrf);
         /* Perform L*L' decomposition of X'*X */

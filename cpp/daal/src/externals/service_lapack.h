@@ -45,6 +45,36 @@ struct Lapack
 {
     typedef typename _impl<fpType, cpu>::SizeType SizeType;
 
+    static void xsterf(int n, fpType* d, fpType* e, int * info)
+    {
+        _impl<fpType, cpu>::xsterf(n, d, e, info);
+    }
+
+    static void xsytrd(int matrix_layout, char uplo, int n, fpType* a, int lda, fpType* d, fpType* e, fpType* tau, int * info)
+    {
+        _impl<fpType, cpu>::xsytrd(matrix_layout, uplo, n, a, lda, d, e, tau, info);
+    }
+
+    static void xlange(int matrix_layout, char norm, int m, int n, const fpType * a, int lda, fpType * res)
+    {
+        _impl<fpType, cpu>::xlange(matrix_layout, norm, m, n, a, lda, res);
+    }
+
+    static void xgetrf(int matrix_layout, int m, int n, fpType * a, int lda, long * ipiv, int * info)
+    {
+        _impl<fpType, cpu>::xgetrf(matrix_layout, m, n, a, lda, ipiv, info);
+    }
+
+    static void xgetrs(int matrix_layout, char trans, int n, int nrhs, const fpType * a, int lda, const long * ipiv, fpType * b, int ldb, int * info)
+    {
+        _impl<fpType, cpu>::xgetrs(matrix_layout, trans, n, nrhs, a, lda, ipiv, b, ldb, info);
+    }
+
+    static void xgetri(int matrix_layout, int n, fpType * a, int lda, const long * ipiv, int * info)
+    {
+        _impl<fpType, cpu>::xgetri(matrix_layout, n, a, lda, ipiv, info);
+    }
+
     static void xpotrf(char * uplo, SizeType * p, fpType * ata, SizeType * ldata, SizeType * info)
     {
         _impl<fpType, cpu>::xpotrf(uplo, p, ata, ldata, info);
@@ -187,6 +217,36 @@ template <typename fpType>
 struct LapackAutoDispatch
 {
     typedef typename Lapack<fpType, CpuType::sse2>::SizeType SizeType;
+
+    static void xsterf(int n, fpType* d, fpType* e, int * info)
+    {
+        DAAL_DISPATCH_LAPACK_BY_CPU(fpType, xsterf, n, d, e, info);
+    }
+
+    static void xsytrd(int matrix_layout, char uplo, int n, fpType* a, int lda, fpType* d, fpType* e, fpType* tau, int * info)
+    {
+        DAAL_DISPATCH_LAPACK_BY_CPU(fpType, xsytrd, matrix_layout, uplo, n, a, lda, d, e, tau, info);
+    }
+
+    static void xlange(int matrix_layout, char norm, int m, int n, const fpType * a, int lda, fpType * res)
+    {
+        DAAL_DISPATCH_LAPACK_BY_CPU(fpType, xlange, matrix_layout, norm, m, n, a, lda, res);
+    }
+
+    static void xgetrf(int matrix_layout, int m, int n, fpType * a, int lda, long * ipiv, int * info)
+    {
+        DAAL_DISPATCH_LAPACK_BY_CPU(fpType, xgetrf, matrix_layout, m, n, a, lda, ipiv, info);
+    }
+
+    static void xgetrs(int matrix_layout, char trans, int n, int nrhs, const fpType * a, int lda, const long * ipiv, fpType * b, int ldb, int * info)
+    {
+        DAAL_DISPATCH_LAPACK_BY_CPU(fpType, xgetrs, matrix_layout, trans, n, nrhs, a, lda, ipiv, b, ldb, info);
+    }
+
+    static void xgetri(int matrix_layout, int n, fpType * a, int lda, const long * ipiv, int * info)
+    {
+        DAAL_DISPATCH_LAPACK_BY_CPU(fpType, xgetri, matrix_layout, n, a, lda, ipiv, info);
+    }
 
     static void xpotrf(char * uplo, SizeType * p, fpType * ata, SizeType * ldata, SizeType * info)
     {

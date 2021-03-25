@@ -32,8 +32,11 @@
 
 #include "src/threading/threading.h"
 
+#include "include/services/error_handling.h"
+
 using namespace daal::internal;
 using namespace daal::services::internal;
+using namespace daal::services;
 
 namespace daal
 {

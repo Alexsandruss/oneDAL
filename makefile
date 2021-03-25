@@ -196,7 +196,7 @@ COV.libia := $(if $(BULLSEYEROOT),$(BULLSEYEROOT)/lib)
 MKLFPKDIR:= $(if $(wildcard $(DIR)/__deps/mklfpk/$(_OS)/*),$(DIR)/__deps/mklfpk,                            \
                 $(if $(wildcard $(MKLFPKROOT)/include/*),$(subst \,/,$(MKLFPKROOT)),                              \
                     $(error Can`t find MKLFPK libs nether in $(DIR)/__deps/mklfpk/$(_OS) not in MKLFPKROOT.)))
-MKLFPKDIR.include := $(MKLFPKDIR)/include $(MKLFPKDIR)/$(if $(OS_is_fbsd),lnx,$(_OS))/include
+MKLFPKDIR.include := $(MKLFPKDIR)/include $(MKLFPKDIR)/$(if $(OS_is_fbsd),lnx,$(_OS))/include /nfs/site/proj/numerics1/Users/aandree1/new/als_work/oneDAL/mkl_include
 MKLFPKDIR.libia   := $(MKLFPKDIR)/$(if $(OS_is_fbsd),lnx,$(_OS))/lib/$(_IA)
 
 topf = $(shell echo $1 | sed 's/ /111/g' | sed 's/(/222/g' | sed 's/)/333/g' | sed 's/\\/\//g')
@@ -304,9 +304,9 @@ release.ONEAPI.LIBS_A.dpc := $(oneapi_a.dpc) \
 release.ONEAPI.LIBS_Y.dpc := $(oneapi_y.dpc)
 
 # Libraries required for building
-daaldep.lnx32e.mkl.thr := $(MKLFPKDIR.libia)/$(plib)daal_mkl_thread.$a
-daaldep.lnx32e.mkl.seq := $(MKLFPKDIR.libia)/$(plib)daal_mkl_sequential.$a
-daaldep.lnx32e.mkl := $(MKLFPKDIR.libia)/$(plib)daal_vmlipp_core.$a
+daaldep.lnx32e.mkl.thr := $(MKLFPKDIR.libia)/$(plib)daal_mkl_thread.$a /export/users/intel/oneapi/mkl/2021.1.1/lib/intel64/libmkl_sequential.a
+daaldep.lnx32e.mkl.seq := $(MKLFPKDIR.libia)/$(plib)daal_mkl_sequential.$a /export/users/intel/oneapi/mkl/2021.1.1/lib/intel64/libmkl_sequential.a
+daaldep.lnx32e.mkl := $(MKLFPKDIR.libia)/$(plib)daal_vmlipp_core.$a /export/users/intel/oneapi/mkl/2021.1.1/lib/intel64/libmkl_core.a /export/users/intel/oneapi/mkl/2021.1.1/lib/intel64/libmkl_intel_ilp64.a
 daaldep.lnx32e.vml :=
 daaldep.lnx32e.ipp := $(if $(COV.libia),$(COV.libia)/libcov.a)
 daaldep.lnx32e.rt.thr := -L$(RELEASEDIR.tbb.soia) -ltbb -ltbbmalloc -lpthread $(daaldep.lnx32e.rt.$(COMPILER)) $(if $(COV.libia),$(COV.libia)/libcov.a)

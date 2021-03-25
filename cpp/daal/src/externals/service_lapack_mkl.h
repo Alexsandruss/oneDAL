@@ -26,6 +26,7 @@
 
 #include "services/daal_defines.h"
 #include "mkl_daal.h"
+#include "mkl_lapacke.h"
 
 #if !defined(__DAAL_CONCAT4)
     #define __DAAL_CONCAT4(a, b, c, d)  __DAAL_CONCAT41(a, b, c, d)
@@ -133,6 +134,36 @@ template <CpuType cpu>
 struct MklLapack<double, cpu>
 {
     typedef DAAL_INT SizeType;
+
+    static void xsterf(int n, double* d, double* e, int * info)
+    {
+        info[0] = LAPACKE_dsterf(n, d, e);
+    }
+
+    static void xsytrd(int matrix_layout, char uplo, int n, double* a, int lda, double* d, double* e, double* tau, int * info)
+    {
+        info[0] = LAPACKE_dsytrd(matrix_layout, uplo, n, a, lda, d, e, tau);
+    }
+
+    static void xlange(int matrix_layout, char norm, int m, int n, const double * a, int lda, double * res)
+    {
+        res[0] = LAPACKE_dlange(matrix_layout, norm, m, n, a, lda);
+    }
+
+    static void xgetrf(int matrix_layout, int m, int n, double * a, int lda, long * ipiv, int * info)
+    {
+        info[0] = LAPACKE_dgetrf(matrix_layout, m, n, a, lda, ipiv);
+    }
+
+    static void xgetrs(int matrix_layout, char trans, int n, int nrhs, const double * a, int lda, const long * ipiv, double * b, int ldb, int * info)
+    {
+        info[0] = LAPACKE_dgetrs(matrix_layout, trans, n, nrhs, a, lda, ipiv, b, ldb);
+    }
+
+    static void xgetri(int matrix_layout, int n, double * a, int lda, const long * ipiv, int * info)
+    {
+        info[0] = LAPACKE_dgetri(matrix_layout, n, a, lda, ipiv);
+    }
 
     static void xpotrf(char * uplo, DAAL_INT * p, double * ata, DAAL_INT * ldata, DAAL_INT * info)
     {
@@ -309,6 +340,36 @@ template <CpuType cpu>
 struct MklLapack<float, cpu>
 {
     typedef DAAL_INT SizeType;
+
+    static void xsterf(int n, float* d, float* e, int * info)
+    {
+        info[0] = LAPACKE_ssterf(n, d, e);
+    }
+
+    static void xsytrd(int matrix_layout, char uplo, int n, float* a, int lda, float* d, float* e, float* tau, int * info)
+    {
+        info[0] = LAPACKE_ssytrd(matrix_layout, uplo, n, a, lda, d, e, tau);
+    }
+
+    static void xlange(int matrix_layout, char norm, int m, int n, const float * a, int lda, float * res)
+    {
+        res[0] = LAPACKE_slange(matrix_layout, norm, m, n, a, lda);
+    }
+
+    static void xgetrf(int matrix_layout, int m, int n, float * a, int lda, long * ipiv, int * info)
+    {
+        info[0] = LAPACKE_sgetrf(matrix_layout, m, n, a, lda, ipiv);
+    }
+
+    static void xgetrs(int matrix_layout, char trans, int n, int nrhs, const float * a, int lda, const long * ipiv, float * b, int ldb, int * info)
+    {
+        info[0] = LAPACKE_sgetrs(matrix_layout, trans, n, nrhs, a, lda, ipiv, b, ldb);
+    }
+
+    static void xgetri(int matrix_layout, int n, float * a, int lda, const long * ipiv, int * info)
+    {
+        info[0] = LAPACKE_sgetri(matrix_layout, n, a, lda, ipiv);
+    }
 
     static void xpotrf(char * uplo, DAAL_INT * p, float * ata, DAAL_INT * ldata, DAAL_INT * info)
     {
