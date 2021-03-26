@@ -240,7 +240,7 @@ Status compute_QR_on_one_node_seq(DAAL_INT m, DAAL_INT n, algorithmFPType * a_q,
     DAAL_INT workDim   = -1;
 
     // buffer size query
-    Lapack<algorithmFPType, cpu>::xxgeqrf(m, n, a_q, lda_q, tau, workQuery, workDim, &mklStatus);
+    Lapack<algorithmFPType, cpu>::xgeqrf(m, n, a_q, lda_q, tau, workQuery, workDim, &mklStatus);
     workDim = workQuery[0];
 
     // a bug in Intel(R) MKL with XORGQR workDim query, to be fixed
@@ -253,7 +253,7 @@ Status compute_QR_on_one_node_seq(DAAL_INT m, DAAL_INT n, algorithmFPType * a_q,
     DAAL_CHECK(work, ErrorMemoryAllocationFailed);
 
     // Compute QR decomposition
-    Lapack<algorithmFPType, cpu>::xxgeqrf(m, n, a_q, lda_q, tau, work, workDim, &mklStatus);
+    Lapack<algorithmFPType, cpu>::xgeqrf(m, n, a_q, lda_q, tau, work, workDim, &mklStatus);
 
     if (mklStatus != 0)
     {

@@ -29,9 +29,7 @@
 #include "src/externals/service_blas.h"
 #include "src/externals/service_lapack.h"
 #include "src/algorithms/service_error_handling.h"
-#include "src/algorithms/svd/svd_dense_default_impl.i"
-#include "mkl_lapacke.h"
-#include <stdlib.h>
+#include "src/algorithms/service_kernel_math.h"
 
 namespace daal
 {
@@ -74,147 +72,9 @@ void ImplicitALSTrainKernelBase<algorithmFPType, cpu>::updateSystem(size_t nCols
 }
 
 template <typename algorithmFPType, CpuType cpu>
-bool ImplicitALSTrainKernelBase<algorithmFPType, cpu>::solveWithPLU(size_t nCols, algorithmFPType * a, algorithmFPType * b)
-{
-    /* Fill upper side of symmetric matrix */ 
-    for (size_t i = 1; i < nCols; ++i)
-    {
-        for (size_t j = 0; j < i; ++j)
-        {
-            a[j * nCols + i] = a[i * nCols + j];
-        }
-    }
-
-    TArray<long, cpu> ipiv(nCols);
-    int info = 0;
-
-    /* Perform PLU decomposition: A = P*L*U */
-    Lapack<algorithmFPType, cpu>::xgetrf(LAPACK_COL_MAJOR, nCols, nCols, a, nCols, ipiv.get(), &info);
-    if (info != 0)
-    {
-        return false;
-    }
-    /* Solve P*L*U * x = b */
-    Lapack<algorithmFPType, cpu>::xgetrs(LAPACK_COL_MAJOR, 'N', nCols, 1, a, nCols, ipiv.get(), b, nCols, &info);
-
-    return (info == 0);
-}
-
-template <typename algorithmFPType, CpuType cpu>
-bool ImplicitALSTrainKernelBase<algorithmFPType, cpu>::solveWithQR(size_t nCols, algorithmFPType * a, algorithmFPType * b)
-{
-    for (size_t i = 1; i < nCols; ++i)
-    {
-        for (size_t j = 0; j < i; ++j)
-        {
-            a[j * nCols + i] = a[i * nCols + j];
-        }
-    }
-
-    TArray<algorithmFPType, cpu> rArr(nCols * nCols);
-    for (size_t i = 0; i < nCols * nCols; ++i) rArr[i] = algorithmFPType(0.0);
-    daal::algorithms::svd::internal::compute_QR_on_one_node_seq<algorithmFPType, cpu>(nCols, nCols, a, nCols, rArr.get(), nCols);
-
-    DAAL_INT info;
-    DAAL_INT iOne   = 1;
-    DAAL_INT iNCols = nCols;
-    algorithmFPType alpha = 1.0;
-    algorithmFPType beta  = 0.0;
-    DAAL_INT inc = 1;
-    char tr = 'T';
-    TArray<algorithmFPType, cpu> bArr(nCols);
-    for (size_t i = 0; i < nCols; ++i) bArr[i] = algorithmFPType(0.0);
-    Blas<algorithmFPType, cpu>::xxgemv(&tr, &iNCols, &iNCols, &alpha, a, &iNCols, b, &inc, &beta, bArr.get(), &inc);
-
-    char up     = 'U';
-    char nodiag = 'N';
-    char trans  = 'N';
-    Lapack<algorithmFPType, cpu>::xtrtrs(&up, &trans, &nodiag, &iNCols, &iOne, rArr.get(), &iNCols, bArr.get(), &iNCols, &info);
-    daal::services::internal::daal_memcpy_s(b, nCols * sizeof(algorithmFPType), bArr.get(), nCols * sizeof(algorithmFPType));
-    return (info == 0);
-}
-
-template <typename algorithmFPType, CpuType cpu>
 bool ImplicitALSTrainKernelBase<algorithmFPType, cpu>::solve(size_t nCols, algorithmFPType * a, algorithmFPType * b)
 {
-    char* strategy;
-    strategy = getenv("SOLUTION_STRATEGY");
-    char def_strat = 'd';
-    if (strategy == NULL)
-    {
-        strategy = &def_strat;
-    }
-
-    if (strategy[0] = 'Q')
-    {
-        return solveWithQR(nCols, a, b);
-    }
-    else if (strategy[0] = 'P')
-    {
-        return solveWithPLU(nCols, a, b);
-    }
-
-    DAAL_INT info = 0;
-    /* Backup A for fallback to PLU decomposition */
-    TArray<algorithmFPType, cpu> aCopy(nCols * nCols);
-    info |= daal::services::internal::daal_memcpy_s(aCopy.get(), nCols * nCols * sizeof(algorithmFPType), a, nCols * nCols * sizeof(algorithmFPType));
-
-    /* POTRF and POTRS parameters */
-    char uplo     = 'U';
-    DAAL_INT iOne = 1;
-
-    /* Perform Cholesky decomposition: A = L*L' */
-    Lapack<algorithmFPType, cpu>::xxpotrf(&uplo, (DAAL_INT *)&nCols, a, (DAAL_INT *)&nCols, &info);
-    if (info != 0)
-    {
-        if (strategy[0] = 'q')
-        {
-            return solveWithQR(nCols, aCopy.get(), b);
-        }
-        else if (strategy[0] = 'p')
-        {
-            return solveWithPLU(nCols, aCopy.get(), b);
-        }
-        return false;
-    }
-
-    /* Backup b for fallback to PLU decomposition */
-    TArray<algorithmFPType, cpu> bCopy(nCols);
-    info |= daal::services::internal::daal_memcpy_s(bCopy.get(), nCols * sizeof(algorithmFPType), b, nCols * sizeof(algorithmFPType));
-
-    /* Solve L*L' * x = b */
-    Lapack<algorithmFPType, cpu>::xxpotrs(&uplo, (DAAL_INT *)&nCols, &iOne, a, (DAAL_INT *)&nCols, b, (DAAL_INT *)&nCols, &info);
-    if (info != 0)
-    {
-        if (strategy[0] = 'q')
-        {
-            /* Fallback to QR decomposition if Cholesky is failed */
-            if (solveWithQR(nCols, aCopy.get(), bCopy.get()))
-            {
-                info = daal::services::internal::daal_memcpy_s(b, nCols * sizeof(algorithmFPType), bCopy.get(), nCols * sizeof(algorithmFPType));
-                return (info == 0);
-            }
-            else
-            {
-                return false;
-            }
-        }
-        else if (strategy[0] = 'p')
-        {
-            /* Fallback to PLU decomposition if Cholesky is failed */
-            if (solveWithPLU(nCols, aCopy.get(), bCopy.get()))
-            {
-                info = daal::services::internal::daal_memcpy_s(b, nCols * sizeof(algorithmFPType), bCopy.get(), nCols * sizeof(algorithmFPType));
-                return (info == 0);
-            }
-            else
-            {
-                return false;
-            }
-        }
-        return false;
-    }
-    return true;
+    return daal::algorithms::internal::solveSystem<algorithmFPType, cpu>(nCols, a, b);
 }
 
 static inline void getSizes(size_t nRows, size_t nCols, size_t & nBlocks, size_t & blockSize, size_t & tailSize)
