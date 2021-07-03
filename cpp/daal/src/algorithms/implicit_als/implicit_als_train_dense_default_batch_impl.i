@@ -25,9 +25,11 @@
 #define __IMPLICIT_ALS_TRAIN_DENSE_DEFAULT_BATCH_IMPL_I__
 
 #include "src/threading/threading.h"
+#include "src/externals/service_math.h"
 #include "src/externals/service_blas.h"
 #include "src/externals/service_lapack.h"
 #include "src/algorithms/service_error_handling.h"
+#include "src/algorithms/service_kernel_math.h"
 
 namespace daal
 {
@@ -72,18 +74,7 @@ void ImplicitALSTrainKernelBase<algorithmFPType, cpu>::updateSystem(size_t nCols
 template <typename algorithmFPType, CpuType cpu>
 bool ImplicitALSTrainKernelBase<algorithmFPType, cpu>::solve(size_t nCols, algorithmFPType * a, algorithmFPType * b)
 {
-    /* POTRF parameters */
-    char uplo     = 'U';
-    DAAL_INT iOne = 1;
-    DAAL_INT info = 0;
-
-    /* Perform L*L' decomposition of A */
-    Lapack<algorithmFPType, cpu>::xxpotrf(&uplo, (DAAL_INT *)&nCols, a, (DAAL_INT *)&nCols, &info);
-    if (info != 0) return false;
-
-    /* Solve L*L' * x = b */
-    Lapack<algorithmFPType, cpu>::xxpotrs(&uplo, (DAAL_INT *)&nCols, &iOne, a, (DAAL_INT *)&nCols, b, (DAAL_INT *)&nCols, &info);
-    return (info == 0);
+    return daal::algorithms::internal::solveSystem<algorithmFPType, cpu>(nCols, a, b);
 }
 
 static inline void getSizes(size_t nRows, size_t nCols, size_t & nBlocks, size_t & blockSize, size_t & tailSize)

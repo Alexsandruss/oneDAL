@@ -65,6 +65,8 @@ public:
     static void updateSystem(size_t nCols, const algorithmFPType * x, const algorithmFPType * coeff, const algorithmFPType * p, algorithmFPType * a,
                              algorithmFPType * b);
 
+    static bool solveWithPLU(size_t nCols, algorithmFPType * a, algorithmFPType * b);
+    static bool solveWithQR(size_t nCols, algorithmFPType * a, algorithmFPType * b);
     static bool solve(size_t nCols, algorithmFPType * a, algorithmFPType * b);
 
 protected:
