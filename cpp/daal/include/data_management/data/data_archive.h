@@ -274,32 +274,26 @@ public:
 
     void write(byte * ptr, size_t size) DAAL_C11_OVERRIDE
     {
-        size_t alignedSize = alignValueUp(size);
-        if (blockAllocatedSize[currentWriteBlock] < blockOffset[currentWriteBlock] + alignedSize)
+        if (blockAllocatedSize[currentWriteBlock] < blockOffset[currentWriteBlock] + size)
         {
-            addBlock(alignedSize);
+            addBlock(size);
         }
 
         size_t offset = blockOffset[currentWriteBlock];
 
-        int result = daal::services::internal::daal_memcpy_s(&(blockPtr[currentWriteBlock][offset]), alignedSize, ptr, size);
+        int result = daal::services::internal::daal_memcpy_s(&(blockPtr[currentWriteBlock][offset]), size, ptr, size);
         if (result)
         {
             this->_errors->add(services::ErrorMemoryCopyFailedInternal);
             return;
         }
-        for (size_t i = size; i < alignedSize; i++)
-        {
-            blockPtr[currentWriteBlock][offset + i] = 0;
-        }
 
-        blockOffset[currentWriteBlock] += alignedSize;
+        blockOffset[currentWriteBlock] += size;
     }
 
     void read(byte * ptr, size_t size) DAAL_C11_OVERRIDE
     {
-        size_t alignedSize = alignValueUp(size);
-        if (blockOffset[currentReadBlock] < currentReadBlockOffset + alignedSize)
+        if (blockOffset[currentReadBlock] < currentReadBlockOffset + size)
         {
             this->_errors->add(services::ErrorDataArchiveInternal);
             return;
@@ -312,7 +306,7 @@ public:
             return;
         }
 
-        currentReadBlockOffset += alignedSize;
+        currentReadBlockOffset += size;
         if (blockOffset[currentReadBlock] == currentReadBlockOffset)
         {
             currentReadBlock++;
@@ -460,20 +454,6 @@ protected:
         blockPtr[currentWriteBlock]           = (byte *)daal::services::daal_malloc(allocationSize);
         blockAllocatedSize[currentWriteBlock] = allocationSize;
         blockOffset[currentWriteBlock]        = 0;
-    }
-
-    inline size_t alignValueUp(size_t value)
-    {
-        if (_majorVersion == 2016 && _minorVersion == 0 && _updateVersion == 0)
-        {
-            return value;
-        }
-
-        size_t alignm1 = DAAL_MALLOC_DEFAULT_ALIGNMENT - 1;
-
-        size_t alignedValue = value + alignm1;
-        alignedValue &= ~alignm1;
-        return alignedValue;
     }
 
     services::SharedPtr<services::ErrorCollection> _errors;
