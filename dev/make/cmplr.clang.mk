@@ -19,7 +19,7 @@
 #  Clang defenitions for makefile
 #--
 
-PLATs.clang = lnx32e mac32e fbsd32e
+PLATs.clang = lnx32e mac32e win32e fbsd32e
 
 CMPLRDIRSUFF.clang = _clang
 
@@ -35,10 +35,13 @@ COMPILER.fbsd.clang = clang++ $(if $(IA_is_ia32),-m32,-m64) -fgnu-runtime -Wno-i
                       -Werror -Wreturn-type
 COMPILER.lnx.clang = clang++ $(if $(IA_is_ia32),-m32,-m64) \
                      -Werror -Wreturn-type
+COMPILER.win.clang = clang++ $(if $(IA_is_ia32),-m32,-m64) \
+                     -Werror -Wreturn-type
 
 link.dynamic.mac.clang = clang++ -m64
 link.dynamic.fbsd.clang = clang++ $(if $(IA_is_ia32),-m32,-m64)
 link.dynamic.lnx.clang = clang++ $(if $(IA_is_ia32),-m32,-m64)
+link.dynamic.win.clang = clang++ $(if $(IA_is_ia32),-m32,-m64)
 
 pedantic.opts.clang = -pedantic \
                       -Wall \
@@ -47,6 +50,7 @@ pedantic.opts.clang = -pedantic \
 
 pedantic.opts.mac.clang = $(pedantic.opts.clang)
 pedantic.opts.lnx.clang = $(pedantic.opts.clang)
+pedantic.opts.win.clang = $(pedantic.opts.clang)
 
 p4_OPT.clang   = $(-Q)march=nocona
 mc_OPT.clang   = $(-Q)march=core2
